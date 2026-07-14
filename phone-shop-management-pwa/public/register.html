@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05070d" />
+    <title>Create Account - PhoneShop GH</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-orbs">
+      <div class="orb"></div>
+      <div class="orb"></div>
+      <div class="orb"></div>
+    </div>
+
+    <div class="auth-wrap">
+      <div class="auth-visual" style="background-image: url('/images/hero-login.jpg')">
+        <div class="content">
+          <div class="brand">
+            <div class="brand-logo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="3" />
+                <line x1="12" y1="18" x2="12" y2="18" />
+              </svg>
+            </div>
+            <div>
+              <div class="brand-name">PhoneShop GH</div>
+              <div class="brand-sub">Join Ghana's phone retail OS</div>
+            </div>
+          </div>
+          <h1>Start managing your phone shop today.</h1>
+          <p>
+            Open a new shop or join an existing one using a join code. Admins
+            get full control, workers handle sales, repairers manage spare
+            parts.
+          </p>
+        </div>
+      </div>
+
+      <div class="auth-form-wrap">
+        <form id="regForm" class="auth-form glass-strong">
+          <h2>Create your account</h2>
+          <p class="subtitle">Setup a new shop or join an existing one</p>
+
+          <div id="alert" class="alert alert-error hidden"></div>
+
+          <div class="field">
+            <label for="role">I want to</label>
+            <select id="role" name="role">
+              <option value="shop_admin">Open a new shop (Shop Admin)</option>
+              <option value="worker">Join an existing shop as Worker</option>
+              <option value="repairer">Join an existing shop as Repairer</option>
+            </select>
+          </div>
+
+          <div id="shopFields">
+            <div class="field">
+              <label for="shopName">Shop name</label>
+              <input id="shopName" name="shopName" type="text" placeholder="e.g. Accra Mobile Hub" />
+            </div>
+            <div class="field">
+              <label for="shopLocation">Location</label>
+              <input id="shopLocation" name="shopLocation" type="text" placeholder="e.g. Accra, Ghana" value="Ghana" />
+            </div>
+          </div>
+
+          <div id="joinField" class="field hidden">
+            <label for="joinCode">Shop join code</label>
+            <input id="joinCode" name="joinCode" type="text" placeholder="e.g. A1B2C3" />
+            <div class="text-sm text-dim mt-2">
+              Ask your shop admin for the 6-character join code.
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="fullName">Full name</label>
+            <input id="fullName" name="fullName" type="text" required />
+          </div>
+
+          <div class="field">
+            <div class="row">
+              <div>
+                <label for="username">Username</label>
+                <input id="username" name="username" type="text" required autocomplete="username" />
+              </div>
+              <div>
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" required autocomplete="email" />
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="password">Password (min 6 chars)</label>
+            <input id="password" name="password" type="password" required autocomplete="new-password" minlength="6" />
+          </div>
+
+          <div class="field">
+            <label for="securityQuestion">Security question (for password recovery)</label>
+            <input id="securityQuestion" name="securityQuestion" type="text" placeholder="e.g. Name of your first pet" />
+          </div>
+          <div class="field">
+            <label for="securityAnswer">Security answer</label>
+            <input id="securityAnswer" name="securityAnswer" type="text" placeholder="Your answer" autocomplete="off" />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+            Create account
+          </button>
+
+          <div class="auth-footer">
+            Already have an account? <a href="/index.html">Sign in</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+    <script>
+      const roleEl = document.getElementById("role");
+      const shopFields = document.getElementById("shopFields");
+      const joinField = document.getElementById("joinField");
+      roleEl.addEventListener("change", () => {
+        const isAdmin = roleEl.value === "shop_admin" || roleEl.value === "admin";
+        shopFields.classList.toggle("hidden", !isAdmin);
+        joinField.classList.toggle("hidden", isAdmin);
+      });
+
+      const form = document.getElementById("regForm");
+      const alertEl = document.getElementById("alert");
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        alertEl.classList.add("hidden");
+        const payload = {
+          role: roleEl.value,
+          fullName: document.getElementById("fullName").value.trim(),
+          username: document.getElementById("username").value.trim(),
+          email: document.getElementById("email").value.trim(),
+          password: document.getElementById("password").value,
+          shopName: document.getElementById("shopName").value.trim() || undefined,
+          shopLocation: document.getElementById("shopLocation").value.trim() || undefined,
+          joinCode: document.getElementById("joinCode").value.trim() || undefined,
+          securityQuestion: document.getElementById("securityQuestion").value.trim() || undefined,
+          securityAnswer: document.getElementById("securityAnswer").value.trim() || undefined,
+        };
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span><span>Creating...</span>';
+        try {
+          const res = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Registration failed");
+          App.setToken(data.token);
+          App.setUser(data.user);
+          App.toast("Account created!", "success");
+          location.href = "/dashboard.html";
+        } catch (err) {
+          alertEl.textContent = err.message;
+          alertEl.classList.remove("hidden");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Create account";
+        }
+      });
+    </script>
+  </body>
+</html>

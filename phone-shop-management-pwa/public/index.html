@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05070d" />
+    <title>PhoneShop GH - Sign In</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-512.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-orbs">
+      <div class="orb"></div>
+      <div class="orb"></div>
+      <div class="orb"></div>
+    </div>
+
+    <div class="auth-wrap">
+      <div
+        class="auth-visual"
+        style="background-image: url('/images/hero-login.jpg')"
+      >
+        <div class="content">
+          <div class="brand">
+            <div class="brand-logo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="3" />
+                <line x1="12" y1="18" x2="12" y2="18" />
+              </svg>
+            </div>
+            <div>
+              <div class="brand-name">PhoneShop GH</div>
+              <div class="brand-sub">Ghana's phone retail OS</div>
+            </div>
+          </div>
+          <h1>Run your phone shop like a modern tech brand.</h1>
+          <p>
+            Track inventory by category and model, manage spare parts for your
+            repair bench, monitor sales, and keep your team in sync — with full
+            role-based access control and offline-ready PWA.
+          </p>
+        </div>
+      </div>
+
+      <div class="auth-form-wrap">
+        <form id="loginForm" class="auth-form glass-strong">
+          <h2>Welcome back</h2>
+          <p class="subtitle">Sign in to manage your shop</p>
+
+          <div id="alert" class="alert alert-error hidden"></div>
+          <div id="seedInfo" class="alert alert-info hidden"></div>
+
+          <div class="field">
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" autocomplete="username" required />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+            <span>Sign In</span>
+          </button>
+
+          <div class="auth-footer">
+            <a href="/forgot-password.html">Forgot password?</a>
+            <span style="margin: 0 8px; color: var(--muted)">·</span>
+            <a href="/register.html">Create an account</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+    <script>
+      // If already logged in, go to dashboard
+      (async function () {
+        const token = App.getToken();
+        if (token) {
+          try {
+            const res = await fetch("/api/auth", { headers: App.authHeaders() });
+            if (res.ok) {
+              location.href = "/dashboard.html";
+              return;
+            }
+          } catch (e) {}
+        }
+        // Seed demo data (no-op if already seeded)
+        await App.seedIfNeeded();
+        if (App._seedResult && App._seedResult.seeded) {
+          const info = document.getElementById("seedInfo");
+          info.classList.remove("hidden");
+          info.innerHTML =
+            "<strong>Demo shop ready.</strong><br/>Username: <code>admin</code> · Password: <code>admin123</code><br/><small>Join code: <code>" +
+            App._seedResult.shop.joinCode +
+            "</code></small>";
+        }
+      })();
+
+      const form = document.getElementById("loginForm");
+      const alertEl = document.getElementById("alert");
+      const submitBtn = document.getElementById("submitBtn");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        alertEl.classList.add("hidden");
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span><span>Signing in...</span>';
+        try {
+          const res = await fetch("/api/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Login failed");
+          App.setToken(data.token);
+          App.setUser(data.user);
+          location.href = "/dashboard.html";
+        } catch (err) {
+          alertEl.textContent = err.message;
+          alertEl.classList.remove("hidden");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = "<span>Sign In</span>";
+        }
+      });
+    </script>
+
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
